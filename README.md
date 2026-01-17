@@ -1,0 +1,2 @@
+# ReqAtlas
+ReqAtlas is a modern, developer-first API client for exploring, debugging, and orchestrating APIs. It provides a structured, map-like view of requests and flows, helping developers understand relationships, manage environments, and work with complex API systems.
