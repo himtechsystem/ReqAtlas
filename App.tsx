@@ -338,7 +338,7 @@ const App: React.FC = () => {
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', `gemini-postman-config-${Date.now()}.json`);
+    linkElement.setAttribute('download', `reqatlas-config-${Date.now()}.json`);
     linkElement.click();
     setIsSettingsModalOpen(false);
   }, [state.collections, state.environments, state.history, state.cookies]);
