@@ -1,0 +1,5 @@
+{
+  "name": "ReqAtlas v1",
+  "description": "A feature-rich API client inspired by Postman, integrated with Gemini 2.5 Flash Image for advanced AI-driven image editing and transformation.",
+  "requestFramePermissions": []
+}
