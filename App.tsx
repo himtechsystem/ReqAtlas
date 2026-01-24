@@ -81,11 +81,11 @@ const App: React.FC = () => {
     }
     const historyFound = state.history.find(r => r.id === state.activeRequestId);
     if (historyFound) return historyFound;
-    
+
     return state.collections[0]?.requests[0] || INITIAL_REQUEST;
   }, [state.collections, state.history, state.activeRequestId]);
 
-  const activeEnv = useMemo(() => 
+  const activeEnv = useMemo(() =>
     state.environments.find(e => e.id === state.activeEnvironmentId),
     [state.environments, state.activeEnvironmentId]
   );
@@ -149,7 +149,7 @@ const App: React.FC = () => {
       url: INITIAL_REQUEST.url,
       method: type === 'graphql' ? HttpMethod.POST : HttpMethod.GET
     };
-    
+
     setState(prev => {
       const newCollections = [...prev.collections];
       if (newCollections.length > 0) {
@@ -220,12 +220,12 @@ const App: React.FC = () => {
   const handleSendRequest = async () => {
     const startTime = Date.now();
     const resolvedUrl = resolveVariables(activeRequest.url);
-    
+
     // Simulate finding matching cookies for the domain
     let domain = '';
     try {
       domain = new URL(resolvedUrl).hostname;
-    } catch (e) {}
+    } catch (e) { }
 
     const matchingCookies = state.cookies.filter(c => domain.includes(c.domain));
     const cookieHeader = matchingCookies.map(c => `${c.name}=${c.value}`).join('; ');
@@ -234,13 +234,13 @@ const App: React.FC = () => {
       const alreadyInHistory = prev.history.find(h => h.id === activeRequest.id);
       if (alreadyInHistory) {
         return {
-           ...prev,
-           history: [activeRequest, ...prev.history.filter(h => h.id !== activeRequest.id)].slice(0, 50)
+          ...prev,
+          history: [activeRequest, ...prev.history.filter(h => h.id !== activeRequest.id)].slice(0, 50)
         };
       }
       return {
         ...prev,
-        history: [{...activeRequest, timestamp: Date.now()}, ...prev.history].slice(0, 50)
+        history: [{ ...activeRequest, timestamp: Date.now() }, ...prev.history].slice(0, 50)
       };
     });
 
@@ -249,7 +249,7 @@ const App: React.FC = () => {
       activeRequest.headers.forEach(h => {
         if (h.enabled && h.key) headers[h.key] = resolveVariables(h.value);
       });
-      
+
       // Apply Auth Headers
       if (activeRequest.auth.type === 'basic' && activeRequest.auth.basic) {
         const u = resolveVariables(activeRequest.auth.basic.username);
@@ -273,9 +273,16 @@ const App: React.FC = () => {
       });
 
       const resolvedBody = resolveVariables(activeRequest.body);
-      const response = await fetch(resolvedUrl, {
+
+      // Use internal proxy to bypass CORS
+      const proxyUrl = 'http://127.0.0.1:3001/proxy';
+
+      const response = await fetch(proxyUrl, {
         method: activeRequest.method,
-        headers,
+        headers: {
+          ...headers,
+          'x-target-url': resolvedUrl
+        },
         body: activeRequest.method !== HttpMethod.GET && activeRequest.method !== HttpMethod.HEAD ? resolvedBody : undefined
       });
       const contentType = response.headers.get('content-type') || '';
@@ -285,9 +292,14 @@ const App: React.FC = () => {
         const blob = await response.blob();
         data = URL.createObjectURL(blob);
       } else {
-        data = await response.json().catch(() => response.text());
+        const text = await response.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = text;
+        }
       }
-      
+
       const time = Date.now() - startTime;
       const apiResponse: ApiResponse = {
         status: response.status,
@@ -335,7 +347,7 @@ const App: React.FC = () => {
       history: state.history,
       cookies: state.cookies
     }, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', `reqatlas-config-${Date.now()}.json`);
@@ -391,7 +403,7 @@ const App: React.FC = () => {
     }
   };
 
-  const runningCollection = useMemo(() => 
+  const runningCollection = useMemo(() =>
     state.collections.find(c => c.id === runningCollectionId),
     [state.collections, runningCollectionId]
   );
@@ -399,14 +411,14 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen w-full bg-[#090909] font-sans text-sm selection:bg-orange-500 selection:text-white">
       {isStarting && <StartupSplash onComplete={() => setIsStarting(false)} />}
-      
+
       {/* Navigation Rail */}
       <nav className="w-24 border-r border-[#2a2a2a] bg-[#0d0d0d] flex flex-col items-center py-8 space-y-10 flex-shrink-0 relative">
         <div className="w-12 h-12 rounded bg-orange-600 flex items-center justify-center text-white text-xl shadow-lg mb-4">
-           <i className="fa-solid fa-cube"></i>
+          <i className="fa-solid fa-cube"></i>
         </div>
-        
-        <button 
+
+        <button
           onClick={() => switchNavTab('collections')}
           className={`flex flex-col items-center space-y-2 transition-colors w-full group ${state.activeNavTab === 'collections' ? 'text-orange-500' : 'text-gray-500 hover:text-gray-300'}`}
         >
@@ -414,7 +426,7 @@ const App: React.FC = () => {
           <span className="text-[9px] font-bold uppercase tracking-tight text-center px-1">Collections</span>
         </button>
 
-        <button 
+        <button
           onClick={() => switchNavTab('history')}
           className={`flex flex-col items-center space-y-2 transition-colors w-full group ${state.activeNavTab === 'history' ? 'text-orange-500' : 'text-gray-500 hover:text-gray-300'}`}
         >
@@ -422,7 +434,7 @@ const App: React.FC = () => {
           <span className="text-[9px] font-bold uppercase tracking-tight text-center px-1">History</span>
         </button>
 
-        <button 
+        <button
           onClick={() => setIsCookieModalOpen(true)}
           className="flex flex-col items-center space-y-2 text-gray-500 hover:text-orange-500 transition-colors w-full group"
         >
@@ -432,7 +444,7 @@ const App: React.FC = () => {
 
         <div className="flex-1"></div>
 
-        <button 
+        <button
           onClick={() => setIsConsoleOpen(!isConsoleOpen)}
           className={`flex flex-col items-center space-y-2 transition-colors w-full group mb-4 ${isConsoleOpen ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500'}`}
         >
@@ -441,7 +453,7 @@ const App: React.FC = () => {
         </button>
 
         <div className="pb-4 flex flex-col items-center">
-          <button 
+          <button
             onClick={() => setIsSettingsModalOpen(true)}
             className="text-gray-500 hover:text-orange-500 transition-colors p-2"
             title="Settings & Configuration"
@@ -453,11 +465,11 @@ const App: React.FC = () => {
 
       {/* Sidebar Area */}
       {isSidebarVisible ? (
-        <Sidebar 
-          collections={state.collections} 
+        <Sidebar
+          collections={state.collections}
           history={state.history}
           activeNavTab={state.activeNavTab}
-          activeRequestId={state.activeRequestId} 
+          activeRequestId={state.activeRequestId}
           onSelectRequest={handleSelectRequest}
           onAddRequest={() => setIsNewReqModalOpen(true)}
           onDeleteRequest={handleDeleteRequest}
@@ -475,7 +487,7 @@ const App: React.FC = () => {
         <header className="h-12 border-b border-[#2a2a2a] flex items-center bg-[#111111] justify-between overflow-x-auto no-scrollbar">
           <div className="flex items-center h-full">
             {!isSidebarVisible && (
-              <button 
+              <button
                 onClick={() => setIsSidebarVisible(true)}
                 className="px-4 text-orange-500 hover:text-orange-400 transition-colors h-full border-r border-[#2a2a2a]"
                 title="Expand Sidebar"
@@ -489,18 +501,17 @@ const App: React.FC = () => {
               if (!req) return null;
               const { icon, color } = getRequestTypeIcon(req.requestType);
               return (
-                <div 
+                <div
                   key={oid}
                   onClick={() => setState(prev => ({ ...prev, activeRequestId: oid }))}
-                  className={`px-4 flex items-center border-r border-[#2a2a2a] h-full cursor-pointer transition-colors group relative min-w-[180px] max-w-[260px] ${
-                    state.activeRequestId === oid 
-                      ? 'bg-[#090909] text-orange-500 border-b-2 border-b-orange-500' 
-                      : 'text-gray-500 hover:bg-white/5'
-                  }`}
+                  className={`px-4 flex items-center border-r border-[#2a2a2a] h-full cursor-pointer transition-colors group relative min-w-[180px] max-w-[260px] ${state.activeRequestId === oid
+                    ? 'bg-[#090909] text-orange-500 border-b-2 border-b-orange-500'
+                    : 'text-gray-500 hover:bg-white/5'
+                    }`}
                 >
                   <i className={`fa-solid ${icon} mr-3 text-[12px] ${color}`}></i>
                   <span className="truncate text-[11px] font-bold flex-1">{req.name}</span>
-                  <button 
+                  <button
                     onClick={(e) => handleCloseTab(e, oid)}
                     className={`ml-2 transition-opacity p-1 hover:text-white ${state.activeRequestId === oid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                   >
@@ -509,7 +520,7 @@ const App: React.FC = () => {
                 </div>
               );
             })}
-            <button 
+            <button
               onClick={() => setIsNewReqModalOpen(true)}
               className="px-5 h-full hover:bg-white/5 text-gray-400 hover:text-orange-500 transition-all flex items-center justify-center flex-shrink-0"
               title="New Request"
@@ -517,10 +528,10 @@ const App: React.FC = () => {
               <i className="fa-solid fa-plus"></i>
             </button>
           </div>
-          
+
           <div className="flex items-center px-4 space-x-3 flex-shrink-0">
             <div className="flex items-center bg-[#090909] border border-[#2a2a2a] rounded overflow-hidden">
-              <select 
+              <select
                 value={state.activeEnvironmentId || ''}
                 onChange={(e) => setState(prev => ({ ...prev, activeEnvironmentId: e.target.value || null }))}
                 className="bg-transparent text-[11px] text-gray-400 px-3 py-1.5 focus:outline-none cursor-pointer hover:text-white transition-colors min-w-[140px]"
@@ -530,7 +541,7 @@ const App: React.FC = () => {
                   <option key={env.id} value={env.id}>{env.name}</option>
                 ))}
               </select>
-              <button 
+              <button
                 onClick={() => setIsEnvModalOpen(true)}
                 className="px-3 py-1.5 border-l border-[#2a2a2a] text-gray-500 hover:text-orange-500 transition-colors"
                 title="Manage Environments"
@@ -544,29 +555,29 @@ const App: React.FC = () => {
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {state.activeRequestId ? (
             <>
-              <RequestEditor 
-                request={activeRequest} 
-                onUpdate={handleUpdateRequest} 
+              <RequestEditor
+                request={activeRequest}
+                onUpdate={handleUpdateRequest}
                 onSend={handleSendRequest}
               />
               <ResponsePanel response={state.responses[state.activeRequestId]} />
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-gray-600 space-y-4">
-               <i className="fa-solid fa-rocket text-6xl opacity-20"></i>
-               <p className="text-sm font-medium">Select a request or create a new one to start testing APIs</p>
-               <button 
-                 onClick={() => setIsNewReqModalOpen(true)}
-                 className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded font-bold transition-all shadow-lg"
-               >
-                 Create New Request
-               </button>
+              <i className="fa-solid fa-rocket text-6xl opacity-20"></i>
+              <p className="text-sm font-medium">Select a request or create a new one to start testing APIs</p>
+              <button
+                onClick={() => setIsNewReqModalOpen(true)}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded font-bold transition-all shadow-lg"
+              >
+                Create New Request
+              </button>
             </div>
           )}
 
           {/* Collection Runner Modal/Overlay */}
           {runningCollection && (
-            <CollectionRunner 
+            <CollectionRunner
               collection={runningCollection}
               activeEnvironment={activeEnv}
               onClose={() => setRunningCollectionId(null)}
@@ -574,9 +585,9 @@ const App: React.FC = () => {
           )}
 
           {/* Console Overlay Component */}
-          <ConsoleOverlay 
-            isOpen={isConsoleOpen} 
-            logs={state.logs} 
+          <ConsoleOverlay
+            isOpen={isConsoleOpen}
+            logs={state.logs}
             onClose={() => setIsConsoleOpen(false)}
             onClear={() => setState(prev => ({ ...prev, logs: [] }))}
           />
@@ -584,7 +595,7 @@ const App: React.FC = () => {
       </main>
 
       {isEnvModalOpen && (
-        <EnvironmentManager 
+        <EnvironmentManager
           environments={state.environments}
           onUpdateEnvironments={(envs) => setState(prev => ({ ...prev, environments: envs }))}
           onClose={() => setIsEnvModalOpen(false)}
@@ -592,14 +603,14 @@ const App: React.FC = () => {
       )}
 
       {isNewReqModalOpen && (
-        <NewRequestModal 
-          onSelect={handleAddRequest} 
-          onClose={() => setIsNewReqModalOpen(false)} 
+        <NewRequestModal
+          onSelect={handleAddRequest}
+          onClose={() => setIsNewReqModalOpen(false)}
         />
       )}
 
       {isSettingsModalOpen && (
-        <SettingsModal 
+        <SettingsModal
           onExport={exportConfig}
           onLoad={loadConfig}
           onClose={() => setIsSettingsModalOpen(false)}
@@ -607,7 +618,7 @@ const App: React.FC = () => {
       )}
 
       {isCookieModalOpen && (
-        <CookieManager 
+        <CookieManager
           cookies={state.cookies}
           onUpdateCookies={(cookies) => setState(prev => ({ ...prev, cookies }))}
           onClose={() => setIsCookieModalOpen(false)}
