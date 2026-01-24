@@ -1,14 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { Collection, Environment, RequestRunResult, HttpMethod } from '../types';
+import { Collection, Environment, RequestRunResult, HttpMethod, Cookie } from '../types';
 
 interface CollectionRunnerProps {
   collection: Collection;
   activeEnvironment: Environment | undefined;
+  cookies: Cookie[];
   onClose: () => void;
 }
 
-const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeEnvironment, onClose }) => {
+const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeEnvironment, cookies, onClose }) => {
   const [results, setResults] = useState<RequestRunResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -31,11 +32,11 @@ const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeE
     setProgress(0);
 
     const newResults: RequestRunResult[] = [];
-    
+
     for (let i = 0; i < collection.requests.length; i++) {
       const request = collection.requests[i];
       const startTime = Date.now();
-      
+
       try {
         const resolvedUrl = resolveVariables(request.url);
         const headers: Record<string, string> = {};
@@ -57,11 +58,28 @@ const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeE
           headers['Authorization'] = `Bearer ${token}`;
         }
 
+        // Simulate finding matching cookies for the domain
+        let domain = '';
+        try {
+          domain = new URL(resolvedUrl).hostname;
+        } catch (e) { }
+
+        const matchingCookies = cookies.filter(c => domain.includes(c.domain));
+        const cookieHeader = matchingCookies.map(c => `${c.name}=${c.value}`).join('; ');
+
+        if (cookieHeader) headers['Cookie'] = cookieHeader;
+
         const resolvedBody = resolveVariables(request.body);
 
-        const response = await fetch(resolvedUrl, {
+        // Use internal proxy to bypass CORS
+        const proxyUrl = 'http://127.0.0.1:3001/proxy';
+
+        const response = await fetch(proxyUrl, {
           method: request.method,
-          headers,
+          headers: {
+            ...headers,
+            'x-target-url': resolvedUrl
+          },
           body: request.method !== HttpMethod.GET && request.method !== HttpMethod.HEAD ? resolvedBody : undefined
         });
 
@@ -88,11 +106,11 @@ const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeE
           error: error.message || 'Failed'
         });
       }
-      
+
       setResults([...newResults]);
       setProgress(((i + 1) / collection.requests.length) * 100);
     }
-    
+
     setIsRunning(false);
   };
 
@@ -120,9 +138,9 @@ const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeE
             <p className="text-[10px] text-gray-500">{collection.requests.length} requests in collection</p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-4">
-          <button 
+          <button
             onClick={runAll}
             disabled={isRunning}
             className="bg-orange-600 hover:bg-orange-500 disabled:opacity-30 text-white font-bold px-6 py-2 rounded-lg text-xs transition-all flex items-center shadow-lg"
@@ -130,7 +148,7 @@ const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeE
             {isRunning ? <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> : <i className="fa-solid fa-play mr-2"></i>}
             {isRunning ? 'Running...' : 'Run Collection'}
           </button>
-          <button 
+          <button
             onClick={onClose}
             className="text-gray-500 hover:text-white transition-colors p-2"
           >
@@ -141,8 +159,8 @@ const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeE
 
       {/* Progress Bar */}
       <div className="h-1 bg-[#2a2a2a] w-full">
-        <div 
-          className="h-full bg-orange-500 transition-all duration-300" 
+        <div
+          className="h-full bg-orange-500 transition-all duration-300"
           style={{ width: `${progress}%` }}
         ></div>
       </div>
@@ -152,9 +170,9 @@ const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeE
         <div className="flex-1 overflow-y-auto p-8 space-y-2">
           {results.length === 0 && !isRunning && (
             <div className="h-full flex flex-col items-center justify-center text-gray-600">
-               <i className="fa-solid fa-list-check text-6xl mb-6 opacity-10"></i>
-               <p className="font-bold">Ready to batch execute {collection.name}</p>
-               <p className="text-xs">Click "Run Collection" to begin testing all endpoints.</p>
+              <i className="fa-solid fa-list-check text-6xl mb-6 opacity-10"></i>
+              <p className="font-bold">Ready to batch execute {collection.name}</p>
+              <p className="text-xs">Click "Run Collection" to begin testing all endpoints.</p>
             </div>
           )}
 
@@ -163,7 +181,7 @@ const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeE
               <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${res.success ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
                 <i className={`fa-solid ${res.success ? 'fa-check' : 'fa-times'} text-xs`}></i>
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-3 mb-1">
                   <span className="text-[10px] font-black text-gray-500 uppercase">{res.method}</span>
@@ -185,23 +203,23 @@ const CollectionRunner: React.FC<CollectionRunnerProps> = ({ collection, activeE
             </div>
           ))}
           {isRunning && results.length < collection.requests.length && (
-             <div className="p-4 bg-orange-500/5 border border-dashed border-orange-500/30 rounded-lg flex items-center justify-center text-orange-500/50 italic text-xs">
-                <i className="fa-solid fa-spinner fa-spin mr-3"></i>
-                Running next request...
-             </div>
+            <div className="p-4 bg-orange-500/5 border border-dashed border-orange-500/30 rounded-lg flex items-center justify-center text-orange-500/50 italic text-xs">
+              <i className="fa-solid fa-spinner fa-spin mr-3"></i>
+              Running next request...
+            </div>
           )}
         </div>
 
         {/* Summary Sidebar */}
         <div className="w-80 border-l border-[#2a2a2a] bg-[#0d0d0d] p-8 flex flex-col">
           <h2 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-8">Run Summary</h2>
-          
+
           <div className="space-y-6">
             <div className="flex justify-between items-end border-b border-[#2a2a2a] pb-4">
               <span className="text-gray-500 text-xs">Total Requests</span>
               <span className="text-xl font-bold text-white">{summary.total}</span>
             </div>
-            
+
             <div className="flex justify-between items-end border-b border-[#2a2a2a] pb-4">
               <span className="text-gray-500 text-xs">Passed</span>
               <span className="text-xl font-bold text-green-500">{summary.passed}</span>

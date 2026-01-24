@@ -217,9 +217,10 @@ const App: React.FC = () => {
     }));
   };
 
-  const handleSendRequest = async () => {
+  const handleSendRequest = async (requestOverride?: RequestData) => {
     const startTime = Date.now();
-    const resolvedUrl = resolveVariables(activeRequest.url);
+    const requestToSend = requestOverride || activeRequest;
+    const resolvedUrl = resolveVariables(requestToSend.url);
 
     // Simulate finding matching cookies for the domain
     let domain = '';
@@ -580,6 +581,7 @@ const App: React.FC = () => {
             <CollectionRunner
               collection={runningCollection}
               activeEnvironment={activeEnv}
+              cookies={state.cookies}
               onClose={() => setRunningCollectionId(null)}
             />
           )}

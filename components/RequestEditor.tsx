@@ -5,15 +5,16 @@ import { HttpMethod, RequestData, KeyValue, RequestType, AuthConfig } from '../t
 interface RequestEditorProps {
   request: RequestData;
   onUpdate: (updated: RequestData) => void;
-  onSend: () => void;
+  onSend: (request: RequestData) => void;
 }
 
 const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend }) => {
   const [activeTab, setActiveTab] = useState<string>('params');
 
+
   // Reset tab when type changes
   useEffect(() => {
-    switch(request.requestType) {
+    switch (request.requestType) {
       case 'graphql': setActiveTab('query'); break;
       case 'websocket': setActiveTab('message'); break;
       default: setActiveTab('params'); break;
@@ -70,11 +71,11 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
   const updateKeyValue = (type: 'params' | 'headers', index: number, field: keyof KeyValue, value: any) => {
     const list = [...request[type]];
     list[index] = { ...list[index], [field]: value };
-    
+
     if (index === list.length - 1 && (field === 'key' || field === 'value') && value !== '') {
       list.push({ key: '', value: '', enabled: true });
     }
-    
+
     updateField(type, list);
   };
 
@@ -106,18 +107,18 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
     <div className="flex flex-col flex-1 bg-[#111111] overflow-hidden">
       <div className="p-4 flex flex-col space-y-4">
         <div className="flex items-center">
-          <input 
+          <input
             value={request.name}
             onChange={(e) => updateField('name', e.target.value)}
             className="bg-transparent border-none text-gray-200 text-lg font-bold focus:ring-0 focus:outline-none w-full"
             placeholder="Untitled Request"
           />
         </div>
-        
+
         <div className="flex space-x-2">
           <div className="flex flex-1 border border-[#2a2a2a] rounded overflow-hidden bg-[#090909]">
             {request.requestType !== 'websocket' && (
-              <select 
+              <select
                 value={request.method}
                 onChange={(e) => updateField('method', e.target.value as HttpMethod)}
                 className="bg-[#1a1a1a] text-gray-300 px-4 py-2 border-r border-[#2a2a2a] focus:outline-none cursor-pointer hover:bg-[#252525] transition-colors font-bold text-xs"
@@ -127,15 +128,15 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
                 ))}
               </select>
             )}
-            <input 
+            <input
               value={request.url}
               onChange={(e) => updateField('url', e.target.value)}
               className="flex-1 bg-transparent px-4 py-2 text-gray-300 focus:outline-none placeholder-gray-600 font-mono text-xs"
               placeholder={request.requestType === 'websocket' ? "ws://localhost:8080" : "Enter URL or paste text"}
             />
           </div>
-          <button 
-            onClick={onSend}
+          <button
+            onClick={() => onSend(request)}
             className="bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-2 rounded transition-all active:scale-95 flex items-center shadow-lg"
           >
             <span>{request.requestType === 'websocket' ? 'Connect' : 'Send'}</span>
@@ -150,9 +151,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-xs font-medium transition-colors border-b-2 ${
-                activeTab === tab.id ? 'text-orange-500 border-orange-500' : 'text-gray-500 border-transparent hover:text-gray-300'
-              }`}
+              className={`px-4 py-2 text-xs font-medium transition-colors border-b-2 ${activeTab === tab.id ? 'text-orange-500 border-orange-500' : 'text-gray-500 border-transparent hover:text-gray-300'
+                }`}
             >
               {tab.label}
             </button>
@@ -165,7 +165,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
           <div className="flex flex-col space-y-6 max-w-2xl mx-auto py-4">
             <div className="flex flex-col space-y-2">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Type</label>
-              <select 
+              <select
                 value={request.auth?.type || 'none'}
                 onChange={(e) => updateAuthField('type', e.target.value)}
                 className="bg-[#090909] border border-[#2a2a2a] rounded px-4 py-2 text-xs text-gray-300 focus:outline-none focus:border-orange-500"
@@ -182,7 +182,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
               <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                 <div className="flex flex-col space-y-2">
                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Username</label>
-                  <input 
+                  <input
                     value={request.auth.basic?.username || ''}
                     onChange={(e) => updateNestedAuthField('basic', 'username', e.target.value)}
                     placeholder="Username"
@@ -191,7 +191,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
                 </div>
                 <div className="flex flex-col space-y-2">
                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Password</label>
-                  <input 
+                  <input
                     type="password"
                     value={request.auth.basic?.password || ''}
                     onChange={(e) => updateNestedAuthField('basic', 'password', e.target.value)}
@@ -205,7 +205,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
             {request.auth?.type === 'bearer' && (
               <div className="flex flex-col space-y-2 animate-in fade-in slide-in-from-top-2">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Token</label>
-                <textarea 
+                <textarea
                   value={request.auth.bearer?.token || ''}
                   onChange={(e) => updateNestedAuthField('bearer', 'token', e.target.value)}
                   placeholder="Token"
@@ -217,7 +217,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
             {request.auth?.type === 'oauth2' && (
               <div className="flex flex-col space-y-2 animate-in fade-in slide-in-from-top-2">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Access Token</label>
-                <textarea 
+                <textarea
                   value={request.auth.oauth2?.accessToken || ''}
                   onChange={(e) => updateNestedAuthField('oauth2', 'accessToken', e.target.value)}
                   placeholder="Access Token"
@@ -252,15 +252,15 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
                 {(activeTab === 'params' ? request.params : request.headers).map((item, idx) => (
                   <tr key={idx} className="border-b border-[#1a1a1a] hover:bg-white/5 transition-colors group">
                     <td className="p-2 text-center">
-                      <input 
-                        type="checkbox" 
-                        checked={item.enabled} 
+                      <input
+                        type="checkbox"
+                        checked={item.enabled}
                         onChange={(e) => updateKeyValue(activeTab as 'params' | 'headers', idx, 'enabled', e.target.checked)}
                         className="accent-orange-500 w-3 h-3"
                       />
                     </td>
                     <td className="p-1 px-2">
-                      <input 
+                      <input
                         value={item.key}
                         onChange={(e) => updateKeyValue(activeTab as 'params' | 'headers', idx, 'key', e.target.value)}
                         placeholder="Key"
@@ -268,7 +268,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
                       />
                     </td>
                     <td className="p-1 px-2">
-                      <input 
+                      <input
                         value={item.value}
                         onChange={(e) => updateKeyValue(activeTab as 'params' | 'headers', idx, 'value', e.target.value)}
                         placeholder="Value"
@@ -276,7 +276,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
                       />
                     </td>
                     <td className="p-1 px-2">
-                      <input 
+                      <input
                         value={item.description || ''}
                         onChange={(e) => updateKeyValue(activeTab as 'params' | 'headers', idx, 'description', e.target.value)}
                         placeholder="Description"
@@ -285,7 +285,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
                     </td>
                     <td className="p-2 text-right px-4">
                       <div className="flex items-center justify-end space-x-3">
-                        <button 
+                        <button
                           onClick={() => removeKeyValue(activeTab as 'params' | 'headers', idx)}
                           className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                           title="Remove Row"
@@ -293,7 +293,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
                           <i className="fa-solid fa-times text-[10px]"></i>
                         </button>
                         {idx === (activeTab === 'params' ? request.params.length : request.headers.length) - 1 && (
-                          <button 
+                          <button
                             onClick={() => addKeyValue(activeTab as 'params' | 'headers')}
                             className="text-gray-500 hover:text-orange-500 transition-colors"
                             title="Add Row"
@@ -308,11 +308,11 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
               </tbody>
             </table>
             <div className="mt-4 px-2">
-              <button 
+              <button
                 onClick={() => addKeyValue(activeTab as 'params' | 'headers')}
                 className="text-gray-500 hover:text-gray-200 text-[11px] font-bold uppercase tracking-widest flex items-center transition-colors"
               >
-                <i className="fa-solid fa-plus mr-2 text-[10px]"></i> 
+                <i className="fa-solid fa-plus mr-2 text-[10px]"></i>
                 ADD {activeTab === 'params' ? 'PARAMETER' : 'HEADER'}
               </button>
             </div>
@@ -325,11 +325,11 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
               <div className="flex space-x-4 mb-4 text-xs">
                 {['none', 'json', 'form-data'].map(bt => (
                   <label key={bt} className="flex items-center text-gray-400 cursor-pointer capitalize">
-                    <input 
-                      type="radio" 
-                      name="bodyType" 
-                      className="mr-2 accent-orange-500" 
-                      checked={request.bodyType === bt} 
+                    <input
+                      type="radio"
+                      name="bodyType"
+                      className="mr-2 accent-orange-500"
+                      checked={request.bodyType === bt}
                       onChange={() => updateField('bodyType', bt as any)}
                     />
                     {bt}
@@ -337,17 +337,17 @@ const RequestEditor: React.FC<RequestEditorProps> = ({ request, onUpdate, onSend
                 ))}
               </div>
             )}
-            
+
             {(activeTab !== 'body' || request.bodyType !== 'none') ? (
-              <textarea 
+              <textarea
                 value={request.body}
                 onChange={(e) => updateField('body', e.target.value)}
                 className="flex-1 bg-[#090909] border border-[#2a2a2a] p-4 font-mono text-[11px] text-gray-300 focus:outline-none focus:border-orange-500/50 rounded resize-none"
                 placeholder={
                   activeTab === 'query' ? 'query { ... }' :
-                  activeTab === 'variables' ? '{ "var": "val" }' :
-                  activeTab === 'message' ? 'Enter WebSocket message...' :
-                  '{ "key": "value" }'
+                    activeTab === 'variables' ? '{ "var": "val" }' :
+                      activeTab === 'message' ? 'Enter WebSocket message...' :
+                        '{ "key": "value" }'
                 }
               />
             ) : (
